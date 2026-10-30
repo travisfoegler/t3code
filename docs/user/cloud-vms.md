@@ -49,7 +49,7 @@ seconds from either kind below.
 
 1. Start a VM with `boat new --no-env --ttl 7200` and open a shell with
    `boat ssh <id>`.
-2. Clone the repository into `/home/user/<project>`, install the toolchain, and
+2. Clone the repository over HTTPS into `/home/user/<project>`, install the toolchain, and
    install dependencies once so the package cache is warm.
 3. Save it with `boat snapshot <id> <project>-template`, then remove the VM
    with `boat delete <id> --yes`. Agents start VMs from the name.
@@ -66,7 +66,8 @@ create it, so the skill passes `--no-env` every time. A fork keeps the
 environment of the VM it copies, so forks of a `--no-env` VM stay that way.
 If checks need secrets, put only those in a separate environment
 (`boat env new`), use `--environment <name>` instead of `--no-env`, and name
-it in the skill's settings.
+it in the skill's settings. Code you don't trust still runs with `--no-env`,
+whatever the skill's settings say.
 
 The Boat free trial cannot save snapshots. During the trial, stop the prepared
 VM with `boat stop <id>` instead of saving it, and put its id in the skill as

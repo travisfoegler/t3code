@@ -17,7 +17,7 @@ example values; substitute the project's own.
 
 - Template: `my-project-template` (a saved snapshot with the toolchain and a warm package cache), or the `bx_…` id of a stopped VM during the Boat free trial
 - Size: `default`
-- Boat environment: none (`--no-env`), or `--environment <name>` when checks need its secrets
+- Boat environment: none (`--no-env`), or `--environment <name>` when trusted checks need its secrets
 - Directory on the VM: `/home/user/my-project` (where the template holds the repository)
 - Check: `npm ci && npm test`
 - Dev server: `npm run dev -- --host 0.0.0.0` on port `5173`
@@ -60,12 +60,18 @@ id="$(boat new --from my-project-template --type default --no-env --name "t3-$br
 A copy of a saved snapshot gets the Boat environment you pass, so always pass
 the one from the project settings. A fork keeps its template's.
 
+Untrusted code always runs on a VM with no secrets: pass `--no-env` to
+`boat run`, `boat new` and `boat fork`, whatever the project settings say.
+`boat fork --no-env` also removes secrets and login files the template had.
+
 With a stopped-VM template, copy it instead, then always name the copy:
 
 ```sh
 id="$(boat fork bx_template --ttl 3600 --wait | jq -r 'select(.event == "ready") | .id')"
 boat rename "$id" "t3-$branch-$(date +%s)"
 ```
+
+If `boat fork` prints no id, wait a minute and run it once more.
 
 VMs are ready in a few seconds. State the VM id in your reply so later turns
 reuse it instead of creating another. `boat list` shows running VMs by name.
@@ -91,7 +97,8 @@ boat exec "$id" --cwd my-project --timeout 600 -- sh -c 'npm ci && npm test'
   commands work inside it.
 - If the push times out connecting, this network blocks SSH. When the work is
   committed and pushed to the remote, fetch it on the VM over HTTPS instead:
-  `boat exec "$id" --cwd my-project --timeout 600 -- sh -c 'git fetch origin <branch> && git checkout --detach FETCH_HEAD'`.
+  `boat exec "$id" --cwd my-project --timeout 600 -- sh -c 'git fetch https://github.com/<owner>/<repo>.git <branch> && git checkout --detach FETCH_HEAD'`.
+  Use the repository's HTTPS URL, not `origin`, which may point at SSH.
   Uncommitted edits are not included, and a private repository needs a Boat
   environment with access to it. Otherwise tell the user instead of retrying.
 - Ignored files such as `.env` are not pushed.
@@ -137,10 +144,12 @@ quoting limits or prices from memory.
 ## Bring results back
 
 Copy a text file, such as a test report or log, over HTTPS; `jq -j` keeps it
-byte for byte, up to 8 MiB:
+byte for byte, up to 8 MiB. Write the file only when `boat exec` succeeds, so
+a missing report never leaves an empty one:
 
 ```sh
-boat exec "$id" --cwd my-project -- cat reports/junit.xml | jq -j .stdout > junit.xml
+boat exec "$id" --cwd my-project -- cat reports/junit.xml > out.json &&
+  jq -j .stdout out.json > junit.xml
 ```
 
 Copy binaries and directories with `boat scp -r "$id:/home/user/my-project/<path>" <local path>`,
