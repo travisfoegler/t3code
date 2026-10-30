@@ -1,0 +1,30 @@
+name: Boat smoke
+
+on:
+  push:
+    branches:
+      - claude/admiring-bardeen-jwbm3r
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fmt:
+    name: Format check on Boat
+    runs-on: boat
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          sparse-checkout: |
+            /*
+            !/.repos/
+          sparse-checkout-cone-mode: false
+
+      - name: Setup Vite+
+        uses: ./.github/actions/setup-ci-deps
+
+      - name: Check formatting
+        run: vp fmt --check
