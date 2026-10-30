@@ -21,27 +21,39 @@ boat login
 boat status --check
 ```
 
-The agent also needs `jq`. To sign in with an API key instead of a browser,
-pipe it in with `boat login --key-stdin`. The desktop app does not pass keys
-exported in your shell profile to agents, so sign in with `boat login` rather
-than setting a variable there.
+The host also needs `jq` and OpenSSH (`ssh` and `ssh-keygen`). Agents copy
+files to VMs over SSH, so a host whose network allows only HTTPS can run
+commands on VMs but cannot push code to them.
+
+Instead of `boat login`, you can give agents an API key: the CLI reads
+`BOAT_API_KEY`. The desktop app does not pass variables exported in your shell
+profile to agents, so set it as a sensitive environment variable on the
+provider instance in **Settings → Providers**, or sign in with `boat login`.
 
 ## Make a template
 
-A template is a saved VM disk with your toolchain and dependencies already
-installed, so each new VM starts ready to work.
+A template is a VM disk with your toolchain and dependencies already
+installed, so each new VM starts ready to work. VMs start in a couple of
+seconds from either kind below.
 
-1. Start a VM with `boat new` and open a shell with `boat ssh <id>`.
+1. Start a VM with `boat new --ttl 7200` and open a shell with
+   `boat ssh <id>`.
 2. Clone the repository into `/home/user/<project>`, install the toolchain, and
    install dependencies once so the package cache is warm.
 3. Save it with `boat snapshot <id> <project>-template`, then remove the VM
-   with `boat delete <id> --yes`.
+   with `boat delete <id> --yes`. Agents start VMs from the name.
 
-Save again under the same name to refresh the template; new VMs use the new
+Saving again under the same name refreshes the template; new VMs use the new
 version. `~/.cache` and `/tmp` are not saved, so keep caches you need, such as
 Playwright browsers, elsewhere. Do not put secrets in the template. Files your
 `.gitignore` excludes, such as `.env`, are not pushed to VMs, so give VMs
 their settings and secrets through a Boat environment.
+
+The Boat free trial cannot save snapshots. During the trial, stop the prepared
+VM with `boat stop <id>` instead of saving it, and put its id in the skill as
+the template: agents copy it with `boat fork`. Boat deletes a stopped VM after
+14 days, and resuming it changes what later copies start from. The trial also
+runs at most two VMs at once.
 
 ## Add the skill to a project
 
@@ -49,8 +61,9 @@ their settings and secrets through a Boat environment.
    project as `.agents/skills/boat-vm/SKILL.md` for Codex and Antigravity, and
    as `.claude/skills/boat-vm/SKILL.md` for Claude. A symlink between the two
    folders works.
-2. Fill in **Project settings** at the top: the template name, VM size, where
-   the template holds the repository, the check command, and the dev server.
+2. Fill in **Project settings** at the top: the template name (or the stopped
+   VM's id during the trial), VM size, where the template holds the
+   repository, the check command, and the dev server.
 3. In threads that are already open, use **Restart agent session** in the
    command palette.
 
