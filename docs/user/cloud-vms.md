@@ -51,11 +51,13 @@ Playwright browsers, elsewhere. Do not put secrets in the template. Files your
 `.gitignore` excludes, such as `.env`, are not pushed to VMs.
 
 Without `--no-env`, a VM gets your default Boat environment, which can hold
-your GitHub and AI logins, and every copy of a template keeps what the
-template had. Copies of a `--no-env` VM stay that way. If checks need
-secrets, put only those in a separate environment (`boat env new`), start the
-template with `--environment <name>` instead, and name it in the skill's
-settings.
+your GitHub and AI logins, and files it writes stay in a template made from
+it. A VM copied from a saved template gets the environment you pass when you
+create it, so the skill passes `--no-env` every time. A fork keeps the
+environment of the VM it copies, so forks of a `--no-env` VM stay that way.
+If checks need secrets, put only those in a separate environment
+(`boat env new`), use `--environment <name>` instead of `--no-env`, and name
+it in the skill's settings.
 
 The Boat free trial cannot save snapshots. During the trial, stop the prepared
 VM with `boat stop <id>` instead of saving it, and put its id in the skill as

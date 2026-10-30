@@ -53,7 +53,7 @@ Use one VM when you will run several cycles or a dev server:
 
 ```sh
 branch="$(git rev-parse --abbrev-ref HEAD | tr -c 'A-Za-z0-9-\n' '-' | cut -c1-40)"
-id="$(boat new --from my-project-template --type default --no-env --name "t3-$branch-$RANDOM" --ttl 3600 | jq -r 'select(.event == "ready") | .id')"
+id="$(boat new --from my-project-template --type default --no-env --name "t3-$branch-$(date +%s)" --ttl 3600 | jq -r 'select(.event == "ready") | .id')"
 ```
 
 A copy of a saved snapshot gets the Boat environment you pass, so always pass
@@ -63,7 +63,7 @@ With a stopped-VM template, copy it instead, then always name the copy:
 
 ```sh
 id="$(boat fork bx_template --ttl 3600 --wait | jq -r 'select(.event == "ready") | .id')"
-boat rename "$id" "t3-$branch-$RANDOM"
+boat rename "$id" "t3-$branch-$(date +%s)"
 ```
 
 VMs are ready in a few seconds. State the VM id in your reply so later turns
