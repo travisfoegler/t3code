@@ -32,6 +32,10 @@ exits with the command's exit code and puts its output in `.stdout` and
 
 ## Run a check once
 
+If the template is a stopped VM's `bx_…` id, skip this section: `--from`
+accepts only saved snapshots. Use a VM for the thread and delete it after the
+check.
+
 Prefer this for a single check. It creates a VM, pushes this folder, runs the
 command, prints the cost, and deletes the VM:
 
@@ -40,8 +44,7 @@ boat run --from my-project-template --type default --push . -- sh -c 'npm ci && 
 ```
 
 The files land in `/home/user/<this folder's name>`, so the command must
-install dependencies itself. Report the exit code and the cost line. With a
-stopped-VM template, use a VM for the thread instead.
+install dependencies itself. Report the exit code and the cost line.
 
 ## Keep a VM for this thread
 
@@ -52,7 +55,7 @@ branch="$(git rev-parse --abbrev-ref HEAD | tr -c 'A-Za-z0-9-\n' '-' | cut -c1-4
 id="$(boat new --from my-project-template --type default --name "t3-$branch-$RANDOM" --ttl 3600 | jq -r 'select(.event == "ready") | .id')"
 ```
 
-With a stopped-VM template, copy it instead, then name the copy:
+With a stopped-VM template, copy it instead, then always name the copy:
 
 ```sh
 id="$(boat fork bx_template --ttl 3600 --wait | jq -r 'select(.event == "ready") | .id')"
@@ -72,10 +75,16 @@ boat exec "$id" --cwd my-project --timeout 600 -- sh -c 'npm ci && npm test'
 - Always pass `--timeout`. The default of 30 seconds kills builds. Use `0`
   for commands that may take longer than 10 minutes; output then streams as
   JSON lines.
+- Run `boat push` on its own, not piped, and stop if it exits nonzero. The
+  template already holds an older copy of the code, so a check after a failed
+  push passes against stale files.
 - `boat push` copies over SSH and never deletes. Remove files you deleted or
   renamed locally (`git status` lists them) with
   `boat exec "$id" --cwd my-project -- rm <paths>`. If the push times out
   connecting, this network blocks SSH: tell the user instead of retrying.
+- If `boat push` fails with `Operation not permitted`, your sandbox blocked
+  its SSH connection. Rerun only that push outside the sandbox; other `boat`
+  commands work inside it.
 - Ignored files such as `.env` are not pushed.
 
 ## Keep it alive, but not forever
@@ -100,10 +109,12 @@ localhost, run `boat host` again with `--localhost`. Vite needs
 
 ## Several machines
 
-To split work, delegate with `delegate_task` and `isolation: "worktree"`, and
-tell each child to use this skill. Each child creates its own VM from the
-template and pushes its own worktree. Never fork a running VM for this: a fork
-can miss the last minute of writes.
+To split work, start one child per VM and tell each to use this skill and
+delete its VM when done. Each child creates its own VM from the template.
+Children that only run checks can share this checkout. Children that edit
+need their own: delegate with `delegate_task` and `isolation: "worktree"`, and
+each pushes its own worktree. Never fork a running VM for this: a fork can
+miss the last minute of writes.
 
 Boat limits how many VMs run at once and how many start per minute. On
 `limit_reached`, wait for another VM to be deleted or tell the user; the free
@@ -113,7 +124,8 @@ quoting limits or prices from memory.
 
 ## Clean up
 
-Before your final answer, run `boat delete "$id" --yes`. If the user may want
-to inspect the VM, run `boat stop "$id"` instead and tell them; a stopped VM is
-kept for 14 days. Never create, change, resume, or delete the template unless
+Before your final answer, run `boat delete "$id" --yes`. If the VM serves a
+dev server the user asked for, leave it running and give them the id and the
+delete command. If the user may want to inspect the VM, run `boat stop "$id"`
+instead and tell them; a stopped VM is kept for 14 days. Never create, change, resume, or delete the template unless
 the user asks, and never pass secrets with `--env`.

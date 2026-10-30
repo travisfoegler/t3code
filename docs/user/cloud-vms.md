@@ -23,7 +23,9 @@ boat status --check
 
 The host also needs `jq` and OpenSSH (`ssh` and `ssh-keygen`). Agents copy
 files to VMs over SSH, so a host whose network allows only HTTPS can run
-commands on VMs but cannot push code to them.
+commands on VMs but cannot push code to them. If Claude's sandbox is on, it
+blocks that SSH connection too, so Claude reruns `boat push` outside the
+sandbox. Permission modes that ask for approval will prompt for it.
 
 Instead of `boat login`, you can give agents an API key: the CLI reads
 `BOAT_API_KEY`. The desktop app does not pass variables exported in your shell
@@ -53,7 +55,7 @@ The Boat free trial cannot save snapshots. During the trial, stop the prepared
 VM with `boat stop <id>` instead of saving it, and put its id in the skill as
 the template: agents copy it with `boat fork`. Boat deletes a stopped VM after
 14 days, and resuming it changes what later copies start from. The trial also
-runs at most two VMs at once.
+runs at most two VMs at once; a stopped template does not count.
 
 ## Add the skill to a project
 
