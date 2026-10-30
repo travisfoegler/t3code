@@ -1,13 +1,14 @@
 ---
 name: boat-vm
-description: Run builds, tests, and dev servers on disposable Boat cloud VMs while the code stays in this checkout. Use when a check is too heavy for this machine, needs a clean Linux box, or several subagents each need their own machine. Not for moving the agent itself to a VM.
+description: Run builds, tests, dev servers, Docker or compose stacks, and untrusted code on disposable Boat cloud VMs while the code stays in this checkout. Use when a check is too heavy or too long for this machine, needs a clean Linux box or Docker, runs code you don't trust, or several subagents each need their own machine. Not for moving the agent itself to a VM.
 ---
 
 # Boat cloud VMs
 
 Code stays in this checkout. A VM only receives pushed files and runs
 commands, so edit locally and push before every run. For any flag not covered
-here, read the Boat docs at https://docs.boat.dev/llms.txt.
+here, use the `boat-docs` MCP tools when you have them, otherwise
+https://docs.boat.dev/llms.txt.
 
 ## Project settings
 
@@ -84,11 +85,15 @@ boat exec "$id" --cwd my-project --timeout 600 -- sh -c 'npm ci && npm test'
   push passes against stale files.
 - `boat push` copies over SSH and never deletes. Remove files you deleted or
   renamed locally (`git status` lists them) with
-  `boat exec "$id" --cwd my-project -- rm <paths>`. If the push times out
-  connecting, this network blocks SSH: tell the user instead of retrying.
+  `boat exec "$id" --cwd my-project -- rm <paths>`.
 - If `boat push` fails with `Operation not permitted`, your sandbox blocked
   its SSH connection. Rerun only that push outside the sandbox; other `boat`
   commands work inside it.
+- If the push times out connecting, this network blocks SSH. When the work is
+  committed and pushed to the remote, fetch it on the VM over HTTPS instead:
+  `boat exec "$id" --cwd my-project --timeout 600 -- sh -c 'git fetch origin <branch> && git checkout --detach FETCH_HEAD'`.
+  Uncommitted edits are not included, and a private repository needs a Boat
+  environment with access to it. Otherwise tell the user instead of retrying.
 - Ignored files such as `.env` are not pushed.
 
 ## Keep it alive, but not forever
@@ -111,6 +116,9 @@ localhost, run `boat host` again with `--localhost`. Vite needs
 `server.allowedHosts: [".on.boat.dev"]`. Read the server's output with
 `boat exec "$id" --status "$pid"`.
 
+VMs have Docker. Start a compose stack the same way, with
+`--detach 'docker compose up'`. Containers stop when the VM stops.
+
 ## Several machines
 
 To split work, start one child per VM and tell each to use this skill and
@@ -125,6 +133,18 @@ Boat limits how many VMs run at once and how many start per minute. On
 trial runs two at once. On `rate_limited`, wait for the window the error
 names, then retry; the CLI does not retry for you. Run `boat limits` instead of
 quoting limits or prices from memory.
+
+## Bring results back
+
+Copy a text file, such as a test report or log, over HTTPS; `jq -j` keeps it
+byte for byte, up to 8 MiB:
+
+```sh
+boat exec "$id" --cwd my-project -- cat reports/junit.xml | jq -j .stdout > junit.xml
+```
+
+Copy binaries and directories with `boat scp -r "$id:/home/user/my-project/<path>" <local path>`,
+which uses SSH like `boat push`.
 
 ## Clean up
 

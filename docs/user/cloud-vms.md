@@ -22,15 +22,24 @@ boat status --check
 ```
 
 The host also needs `jq` and OpenSSH (`ssh` and `ssh-keygen`). Agents copy
-files to VMs over SSH, so a host whose network allows only HTTPS can run
-commands on VMs but cannot push code to them. If Claude's sandbox is on, it
-blocks that SSH connection too, so Claude reruns `boat push` outside the
-sandbox. Permission modes that ask for approval will prompt for it.
+files to VMs over SSH. On a host whose network allows only HTTPS, agents can
+still run commands on VMs and fetch work already pushed to your repository,
+but cannot copy uncommitted edits. If Claude's sandbox is on, it blocks that
+SSH connection too, so Claude reruns `boat push` outside the sandbox.
+Permission modes that ask for approval will prompt for it.
 
 Instead of `boat login`, you can give agents an API key: the CLI reads
 `BOAT_API_KEY`. The desktop app does not pass variables exported in your shell
 profile to agents, so set it as a sensitive environment variable on the
 provider instance in **Settings → Providers**, or sign in with `boat login`.
+
+Optionally, give agents Boat's documentation as MCP tools so they can look up
+flags the skill does not cover:
+
+```sh
+claude mcp add --transport http boat-docs --scope user https://docs.boat.dev/mcp
+codex mcp add boat-docs --url https://docs.boat.dev/mcp
+```
 
 ## Make a template
 
@@ -86,6 +95,7 @@ Pick the skill with `$boat-vm`, or ask in plain words:
 - "Run the tests on a Boat VM."
 - "Start the dev server on a VM so I can try it from my phone."
 - "Split these fixes into subagents, each testing on its own VM."
+- "Run this script I don't trust, or the compose stack, on a VM."
 
 A single check uses a VM that is deleted as soon as the command ends. For
 repeated checks or a dev server, the agent keeps one VM for the thread and
