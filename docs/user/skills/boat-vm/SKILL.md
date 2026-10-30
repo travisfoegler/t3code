@@ -16,6 +16,7 @@ example values; substitute the project's own.
 
 - Template: `my-project-template` (a saved snapshot with the toolchain and a warm package cache), or the `bx_…` id of a stopped VM during the Boat free trial
 - Size: `default`
+- Boat environment: none (`--no-env`), or `--environment <name>` when checks need its secrets
 - Directory on the VM: `/home/user/my-project` (where the template holds the repository)
 - Check: `npm ci && npm test`
 - Dev server: `npm run dev -- --host 0.0.0.0` on port `5173`
@@ -40,7 +41,7 @@ Prefer this for a single check. It creates a VM, pushes this folder, runs the
 command, prints the cost, and deletes the VM:
 
 ```sh
-boat run --from my-project-template --type default --push . -- sh -c 'npm ci && npm test'
+boat run --from my-project-template --type default --no-env --push . -- sh -c 'npm ci && npm test'
 ```
 
 The files land in `/home/user/<this folder's name>`, so the command must
@@ -52,8 +53,11 @@ Use one VM when you will run several cycles or a dev server:
 
 ```sh
 branch="$(git rev-parse --abbrev-ref HEAD | tr -c 'A-Za-z0-9-\n' '-' | cut -c1-40)"
-id="$(boat new --from my-project-template --type default --name "t3-$branch-$RANDOM" --ttl 3600 | jq -r 'select(.event == "ready") | .id')"
+id="$(boat new --from my-project-template --type default --no-env --name "t3-$branch-$RANDOM" --ttl 3600 | jq -r 'select(.event == "ready") | .id')"
 ```
+
+A copy of a saved snapshot gets the Boat environment you pass, so always pass
+the one from the project settings. A fork keeps its template's.
 
 With a stopped-VM template, copy it instead, then always name the copy:
 
@@ -127,5 +131,6 @@ quoting limits or prices from memory.
 Before your final answer, run `boat delete "$id" --yes`. If the VM serves a
 dev server the user asked for, leave it running and give them the id and the
 delete command. If the user may want to inspect the VM, run `boat stop "$id"`
-instead and tell them; a stopped VM is kept for 14 days. Never create, change, resume, or delete the template unless
-the user asks, and never pass secrets with `--env`.
+instead and tell them; a stopped VM is kept for 14 days. Never create, change,
+resume, or delete the template unless the user asks, and never pass secrets
+with `--env`.

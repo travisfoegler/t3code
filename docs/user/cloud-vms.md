@@ -38,7 +38,7 @@ A template is a VM disk with your toolchain and dependencies already
 installed, so each new VM starts ready to work. VMs start in a couple of
 seconds from either kind below.
 
-1. Start a VM with `boat new --ttl 7200` and open a shell with
+1. Start a VM with `boat new --no-env --ttl 7200` and open a shell with
    `boat ssh <id>`.
 2. Clone the repository into `/home/user/<project>`, install the toolchain, and
    install dependencies once so the package cache is warm.
@@ -48,8 +48,14 @@ seconds from either kind below.
 Saving again under the same name refreshes the template; new VMs use the new
 version. `~/.cache` and `/tmp` are not saved, so keep caches you need, such as
 Playwright browsers, elsewhere. Do not put secrets in the template. Files your
-`.gitignore` excludes, such as `.env`, are not pushed to VMs, so give VMs
-their settings and secrets through a Boat environment.
+`.gitignore` excludes, such as `.env`, are not pushed to VMs.
+
+Without `--no-env`, a VM gets your default Boat environment, which can hold
+your GitHub and AI logins, and every copy of a template keeps what the
+template had. Copies of a `--no-env` VM stay that way. If checks need
+secrets, put only those in a separate environment (`boat env new`), start the
+template with `--environment <name>` instead, and name it in the skill's
+settings.
 
 The Boat free trial cannot save snapshots. During the trial, stop the prepared
 VM with `boat stop <id>` instead of saving it, and put its id in the skill as
